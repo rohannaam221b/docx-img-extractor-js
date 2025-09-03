@@ -1,0 +1,1 @@
+# docx-img-extractor-js
