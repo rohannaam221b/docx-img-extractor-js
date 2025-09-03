@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DOCX Image Extractor Pro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Dark Mode Color Palette */
+  --bg-primary: #0f0f23;
+  --bg-secondary: #1a1a2e;
+  --bg-tertiary: #16213e;
+  --bg-card: #1e1e3f;
+  --bg-hover: #252547;
+  
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0c2;
+  --text-muted: #6b6b8a;
+  
+  /* Accent Colors */
+  --accent-primary: #3b82f6;
+  --accent-secondary: #8b5cf6;
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-error: #ef4444;
+  
+  /* Border Colors */
+  --border-primary: #2d2d54;
+  --border-secondary: #393964;
+  --border-accent: #3b82f6;
+  
+  /* Shadow Colors */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+.container {
+  background-color: var(--bg-secondary);
+  border-radius: 20px;
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-xl);
+  width: 100%;
+  max-width: 900px;
+  padding: 48px;
+  position: relative;
+}
+
+.container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: var(--accent-primary);
+  border-radius: 20px 20px 0 0;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.title {
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  letter-spacing: -0.025em;
+}
+
+.title-emoji {
+  color: var(--accent-primary);
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+  font-weight: 400;
+}
+
+.upload-section {
+  margin-bottom: 48px;
+}
+
+.upload-area {
+  border: 2px dashed var(--border-primary);
+  border-radius: 16px;
+  padding: 64px 32px;
+  text-align: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  background-color: var(--bg-tertiary);
+}
+
+.upload-area:hover {
+  border-color: var(--accent-primary);
+  background-color: var(--bg-card);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.upload-area.dragover {
+  border-color: var(--accent-primary);
+  background-color: var(--bg-card);
+  transform: scale(1.02);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.upload-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 24px;
+  background-color: var(--accent-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.upload-area:hover .upload-icon {
+  transform: scale(1.1);
+  background-color: var(--accent-secondary);
+}
+
+.upload-text {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.upload-subtext {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.file-input {
+  display: none;
+}
+
+.loading {
+  display: none;
+  text-align: center;
+  padding: 48px;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border-primary);
+  border-top: 4px solid var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 24px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 1.125rem;
+}
+
+.results {
+  margin-top: 48px;
+}
+
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.results-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.image-count {
+  background-color: var(--accent-primary);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.image-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideInUp 0.6s ease forwards;
+}
+
+.image-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--border-secondary);
+}
+
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.image-wrapper {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-tertiary);
+  height: 220px;
+}
+
+.image-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.image-card:hover img {
+  transform: scale(1.05);
+}
+
+.image-info {
+  padding: 24px;
+}
+
+.image-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.download-btn {
+  background-color: var(--accent-primary);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: 0.025em;
+}
+
+.download-btn:hover {
+  background-color: var(--accent-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+}
+
+.download-btn:active {
+  transform: translateY(0);
+}
+
+.no-images {
+  text-align: center;
+  padding: 64px 32px;
+  color: var(--text-muted);
+}
+
+.no-images-icon {
+  font-size: 56px;
+  margin-bottom: 24px;
+  opacity: 0.6;
+}
+
+.no-images-text {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.error-state {
+  text-align: center;
+  padding: 64px 32px;
+}
+
+.error-icon {
+  font-size: 56px;
+  margin-bottom: 24px;
+  color: var(--accent-error);
+}
+
+.error-text {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 32px 24px;
+    margin: 10px;
+  }
+  
+  .title {
+    font-size: 2.25rem;
+  }
+  
+  .images-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .upload-area {
+    padding: 48px 24px;
+  }
+  
+  .results-header {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 24px 16px;
+  }
+  
+  .title {
+    font-size: 2rem;
+  }
+  
+  .upload-area {
+    padding: 40px 16px;
+  }
+  
+  .upload-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+/* Focus states for accessibility */
+.upload-area:focus-within {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.download-btn:focus {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Selection color */
+::selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: var(--text-primary);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--border-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent-primary);
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1 class="title"><span class="title-emoji">📸</span> DOCX Image Extractor</h1>
+    <p class="subtitle">Extract and download all images from your Word documents</p>
+  </div>
+  
+  <div class="upload-section">
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📁</div>
+      <div class="upload-text">Drop your DOCX file here</div>
+      <div class="upload-subtext">or click to browse files</div>
+      <input type="file" class="file-input" id="fileInput" accept=".docx" />
+    </div>
+  </div>
+  
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Processing your document...</div>
+  </div>
+  
+  <div id="output"></div>
+</div>
+
+<script>
+const fileInput = document.getElementById("fileInput");
+const uploadArea = document.getElementById("uploadArea");
+const loading = document.getElementById("loading");
+const output = document.getElementById("output");
+
+// Upload area click handler
+uploadArea.addEventListener("click", () => fileInput.click());
+
+// Drag and drop handlers
+uploadArea.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  uploadArea.classList.add("dragover");
+});
+
+uploadArea.addEventListener("dragleave", () => {
+  uploadArea.classList.remove("dragover");
+});
+
+uploadArea.addEventListener("drop", (e) => {
+  e.preventDefault();
+  uploadArea.classList.remove("dragover");
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    handleFile(files[0]);
+  }
+});
+
+// File input change handler
+fileInput.addEventListener("change", (e) => {
+  if (e.target.files[0]) {
+    handleFile(e.target.files[0]);
+  }
+});
+
+async function handleFile(file) {
+  if (!file.name.endsWith('.docx')) {
+    showError('Please select a valid DOCX file');
+    return;
+  }
+  
+  // Show loading
+  loading.style.display = 'block';
+  output.innerHTML = '';
+  
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    
+    // Find media files
+    const mediaFiles = Object.keys(zip.files).filter((f) => 
+      f.startsWith("word/media/") && 
+      /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(f)
+    );
+    
+    // Hide loading
+    loading.style.display = 'none';
+    
+    if (mediaFiles.length === 0) {
+      showNoImages();
+      return;
+    }
+    
+    showResults(mediaFiles, zip);
+    
+  } catch (error) {
+    loading.style.display = 'none';
+    showError('Error processing document. Please ensure it\'s a valid DOCX file.');
+    console.error('Error processing DOCX:', error);
+  }
+}
+
+function showNoImages() {
+  output.innerHTML = `
+    <div class="no-images fade-in">
+      <div class="no-images-icon">🖼️</div>
+      <div class="no-images-text">No images found in this document</div>
+    </div>
+  `;
+}
+
+function showError(message) {
+  output.innerHTML = `
+    <div class="error-state fade-in">
+      <div class="error-icon">⚠️</div>
+      <div class="error-text">${message}</div>
+    </div>
+  `;
+}
+
+function showResults(mediaFiles, zip) {
+  const resultsHeader = `
+    <div class="results fade-in">
+      <div class="results-header">
+        <h3 class="results-title">Extracted Images</h3>
+        <div class="image-count">${mediaFiles.length} image${mediaFiles.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="images-grid" id="imagesGrid"></div>
+    </div>
+  `;
+  
+  output.innerHTML = resultsHeader;
+  const imagesGrid = document.getElementById('imagesGrid');
+  
+  // Process each image
+  mediaFiles.forEach(async (fileName, index) => {
+    try {
+      const blob = await zip.files[fileName].async("blob");
+      const url = URL.createObjectURL(blob);
+      const cleanFileName = fileName.split('/').pop();
+      
+      const imageCard = document.createElement("div");
+      imageCard.className = "image-card";
+      imageCard.style.animationDelay = `${index * 0.1}s`;
+      
+      imageCard.innerHTML = `
+        <div class="image-wrapper">
+          <img src="${url}" alt="${cleanFileName}" loading="lazy" />
+        </div>
+        <div class="image-info">
+          <div class="image-name">${cleanFileName}</div>
+          <button class="download-btn" onclick="downloadImage('${url}', '${cleanFileName}')">
+            ⬇️ Download Image
+          </button>
+        </div>
+      `;
+      
+      imagesGrid.appendChild(imageCard);
+    } catch (error) {
+      console.error('Error processing image:', fileName, error);
+    }
+  });
+}
+
+function downloadImage(url, fileName) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+</script>
+</body>
+</html>
